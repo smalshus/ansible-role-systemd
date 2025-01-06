@@ -1,7 +1,7 @@
 ---
 - name: Reload systemd units
   become: true
-  systemd:
+  ansible.builtin.systemd:
     name: "{{ restart_item.dest | basename }}"
     state: "{{ 'restarted' if unit_requested_state == 'started' else unit_requested_state }}"
     daemon_reload: true
@@ -15,23 +15,30 @@
     loop_var: restart_item
     label: "{{ restart_item.unit_item.name }}.{{ restart_item.unit_item.type | default(_default_unit_type) }}"
   listen: "Reload systemd units"
-  ignore_errors: "{{ ansible_check_mode }}"
+  failed_when: >
+    restart_item is defined and
+    restart_item.failed is defined and
+    restart_item.failed | bool
 
 - name: Reload systemd daemon
   become: true
-  systemd:
+  listen: "Reload systemd daemon"
+  ansible.builtin.systemd:
     daemon_reload: true
   when: restart_item.changed
   loop: "{{ restart_override_units.results }}"
   loop_control:
     loop_var: restart_item
     label: "{{ restart_item.unit_item.name }}.{{ restart_item.unit_item.type | default(_default_unit_type) }}"
-  listen: "Reload systemd daemon"
-  ignore_errors: true
+  failed_when: >
+    restart_item is defined and
+    restart_item.failed is defined and
+    restart_item.failed | bool
 
 - name: Uninstall systemd units
   become: true
-  systemd:
+  listen: Uninstall units
+  ansible.builtin.systemd:
     name: "{{ unit_item.name }}.{{ unit_item.type | default(_default_unit_type) }}"
     state: "stopped"
     enabled: "no"
@@ -39,15 +46,17 @@
   loop_control:
     loop_var: unit_item
     label: "{{ unit_item.name }}.{{ unit_item.type | default(_default_unit_type) }}"
-  listen: Uninstall units
-  ignore_errors: true
+  failed_when: >
+    unit_item is defined and
+    unit_item.failed is defined and
+    unit_item.failed | bool
 
 - name: Remove managed systemd unit files
   become: true
-  file:
+  listen: Uninstall units
+  ansible.builtin.file:
     path: "{{ unit_item.path | default(_default_unit_path) }}/{{ unit_item.name }}.{{ unit_item.type | default(_default_unit_type) }}"
     state: absent
-  listen: Uninstall units
   loop: "{{ unit_config }}"
   loop_control:
     loop_var: unit_item

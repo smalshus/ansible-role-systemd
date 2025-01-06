@@ -1,11 +1,12 @@
 ---
 galaxy_info:
-  author: Ahmad Wilson
+  author: O1 Labs
   role_name: systemd
+  namespace: o1
   description: Systemd, a system and service manager for Linux operating systems
   company: "O1.IO"
   license: license (MIT)
-  min_ansible_version: 2.5
+  min_ansible_version: "2.5"
   platforms:
     - name: EL
       versions:

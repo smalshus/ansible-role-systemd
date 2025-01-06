@@ -1,10 +1,11 @@
 ---
 - name: Check for uninstall signal
-  command: /bin/true
+  ansible.builtin.command: /bin/true
   notify: Uninstall units
   when: perform_uninstall|bool
+  changed_when: false
   tags:
     - preflight
 
 - name: Flush handlers
-  meta: flush_handlers
+  ansible.builtin.meta: flush_handlers
