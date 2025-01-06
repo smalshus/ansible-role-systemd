@@ -5,11 +5,15 @@
 
 - name: Activate configured Systemd units
   become: true
-  when: unit_config is defined and unit_config|length > 0 and (unit_item.type is not defined or unit_item.type != 'conf') and
-        (unit_item.name is not search("^[^@]+@$"))
+  when: >
+    unit_config is defined and unit_config | length > 0 and
+    (unit_item.type is not defined or unit_item.type != 'conf') and
+    (unit_item.name is not search("^[^@]+@$"))
+  vars:
+    unit_item_manage_state: "{{ unit_item.manage_state | default(true) | bool }}"
   ansible.builtin.systemd:
     name: "{{ unit_item.name }}.{{ unit_item.type | default(_default_unit_type) }}"
-    state: "{{ unit_item.state | default(_default_unit_state) }}"
+    state: "{{ unit_item.state | default(_default_unit_state) if unit_item_manage_state else omit }}"
     enabled: "{{ unit_item.enabled | default(_default_unit_enabled) }}"
   loop: "{{ unit_config }}"
   loop_control:
@@ -17,4 +21,4 @@
     label: "{{ unit_item.name }}.{{ unit_item.type | default(_default_unit_type) }}"
   tags:
     - launch
-  ignore_errors: "{{ ansible_check_mode }}"
+  failed_when: "{{ unit_item.failed | default(false) | bool }}"
