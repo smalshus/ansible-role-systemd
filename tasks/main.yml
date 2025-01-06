@@ -4,14 +4,15 @@
   tags:
     - preflight
 
-- name: Include common config tasks
-  ansible.builtin.include_tasks: "common/config.yml"
-  when: not perform_uninstall|bool
-  tags:
-    - config
+- name: Perform setup tasks
+  when: not perform_uninstall | bool
+  block:
+    - name: Include common config tasks
+      ansible.builtin.include_tasks: "common/config.yml"
+      tags:
+        - config
 
-- name: Include common launch tasks
-  ansible.builtin.include_tasks: "common/launch.yml"
-  when: not perform_uninstall|bool
-  tags:
-    - launch
+    - name: Include common launch tasks
+      ansible.builtin.include_tasks: "common/launch.yml"
+      tags:
+        - launch
