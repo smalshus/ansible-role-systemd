@@ -3,10 +3,8 @@
   become: true
   ansible.builtin.systemd:
     name: "{{ restart_item.dest | basename }}"
-    state: "{{ 'restarted' if unit_requested_state == 'started' else unit_requested_state }}"
+    state: "{{ restart_item.unit_item.state | default(omit) }}"
     daemon_reload: true
-  vars:
-    unit_requested_state: "{{ restart_item.unit_item.state | default(_default_unit_state) }}"
   when:
     - restart_item.changed and (restart_item.unit_item.reload_on_change is not defined or restart_item.unit_item.reload_on_change) and
       (restart_item.unit_item.name is not search("^[^@]+@$"))
@@ -15,10 +13,7 @@
     loop_var: restart_item
     label: "{{ restart_item.unit_item.name }}.{{ restart_item.unit_item.type | default(_default_unit_type) }}"
   listen: "Reload systemd units"
-  failed_when: >
-    restart_item is defined and
-    restart_item.failed is defined and
-    restart_item.failed | bool
+  failed_when: "{{ restart_item.failed | default(false) | bool }}"
 
 - name: Reload systemd daemon
   become: true
@@ -30,10 +25,7 @@
   loop_control:
     loop_var: restart_item
     label: "{{ restart_item.unit_item.name }}.{{ restart_item.unit_item.type | default(_default_unit_type) }}"
-  failed_when: >
-    restart_item is defined and
-    restart_item.failed is defined and
-    restart_item.failed | bool
+  failed_when: "{{ restart_item.failed | default(false) | bool }}"
 
 - name: Uninstall systemd units
   become: true
@@ -46,10 +38,7 @@
   loop_control:
     loop_var: unit_item
     label: "{{ unit_item.name }}.{{ unit_item.type | default(_default_unit_type) }}"
-  failed_when: >
-    unit_item is defined and
-    unit_item.failed is defined and
-    unit_item.failed | bool
+  failed_when: "{{ unit_item.failed | default(false) | bool }}"
 
 - name: Remove managed systemd unit files
   become: true
