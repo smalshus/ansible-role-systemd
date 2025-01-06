@@ -1,6 +1,7 @@
 ---
 - name: Reload systemd units
   become: true
+  listen: "Reload systemd units"
   ansible.builtin.systemd:
     name: "{{ restart_item.dest | basename }}"
     state: "{{ restart_item.unit_item.state | default(omit) }}"
@@ -12,7 +13,6 @@
   loop_control:
     loop_var: restart_item
     label: "{{ restart_item.unit_item.name }}.{{ restart_item.unit_item.type | default(_default_unit_type) }}"
-  listen: "Reload systemd units"
   failed_when: "{{ restart_item.failed | default(false) | bool }}"
 
 - name: Reload systemd daemon
