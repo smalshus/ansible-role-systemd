@@ -11,7 +11,13 @@
 {% if config.type|default(_default_unit_type)|title in config %}
 [{{ config.type|default(_default_unit_type)|title }}]
 {% for key, value in config[config.type|default(_default_unit_type)|title].items() %}
+{% if value is not string and value is iterable %}
+{% for value_item in value %}
+{{ key }}={{ value_item }}
+{% endfor %}
+{% else %}
 {{ key }}={{ value }}
+{% endif %}
 {% endfor %}
 {% endif %}
 
