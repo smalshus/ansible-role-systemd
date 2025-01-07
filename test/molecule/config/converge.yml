@@ -1,11 +1,13 @@
 ---
 - name: Systemd unit configuration integration test playbook
-  hosts: test-kitchen
+  hosts: all
   roles:
     - role: ansible-role-systemd
       vars:
         unit_config:
           - name: "test-service"
+            state: started
+            enabled: "yes"
             Unit:
               Description: "This is a test service unit which listens at port 1234"
               After: network-online.target

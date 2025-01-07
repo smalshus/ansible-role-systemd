@@ -8,6 +8,10 @@
       ansible.builtin.command: /bin/true
       notify: Uninstall units
       changed_when: true
+      tags:
+        - molecule-idempotence-notest
 
     - name: Flush handlers to ensure uninstall is completed
       ansible.builtin.meta: flush_handlers
+      tags:
+        - molecule-idempotence-notest
