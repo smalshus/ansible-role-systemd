@@ -1,4 +1,6 @@
-.bundle/
-.kitchen/
-kitchen.local.yml
-vendor/
+# Ignore Python bytecode and cache directories
+__pycache__/
+*.py[cod]
+
+# Ignore any nested __pycache__ directories
+**/__pycache__/
