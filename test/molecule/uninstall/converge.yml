@@ -1,0 +1,36 @@
+---
+- name: Systemd unit uninstall integration test playbook
+  hosts: all
+  roles:
+    - role: ansible-role-systemd
+      vars:
+        perform_uninstall: false
+        unit_config:
+          - name: "test-service"
+            Unit:
+              Description: "This is a test service unit"
+              After: network-online.target
+              Wants: network-online.target
+            Service:
+              User: 'root'
+              Group: 'root'
+              ExecStart: '/usr/bin/sleep infinity'
+              ExecReload: '/bin/kill -s HUP $MAINPID'
+            Install:
+              WantedBy: 'multi-user.target'
+    - role: ansible-role-systemd
+      vars:
+        perform_uninstall: true
+        unit_config:
+          - name: "test-service"
+            Unit:
+              Description: "This is a test service unit"
+              After: network-online.target
+              Wants: network-online.target
+            Service:
+              User: 'root'
+              Group: 'root'
+              ExecStart: '/usr/bin/sleep infinity'
+              ExecReload: '/bin/kill -s HUP $MAINPID'
+            Install:
+              WantedBy: 'multi-user.target'
