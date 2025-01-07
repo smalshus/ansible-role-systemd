@@ -5,6 +5,14 @@
     - role: ansible-role-systemd
       vars:
         unit_config:
+          - name: "default-test-service"
+            path: "/usr/local/lib/systemd/system"
+            Unit:
+              Description: "This is a default test service unit"
+            Service:
+              ExecStart: '/usr/bin/sleep infinity'
+            Install:
+              WantedBy: 'multi-user.target'
           - name: "test-service"
             state: started
             enabled: "yes"
@@ -38,7 +46,7 @@
               What: '/dev/stdin'
               Where: '/tmp/stdin'
             Install:
-              WantedBy: 'mount.target'
+              WantedBy: 'test-target.target'
           - name: "test-target"
             type: "target"
             path: "/etc/systemd/system"

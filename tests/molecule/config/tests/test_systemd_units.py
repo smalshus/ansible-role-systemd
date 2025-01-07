@@ -4,7 +4,7 @@ import pytest
     "file_path,owner,group,mode,content_matches",
     [
         (
-            "/etc/systemd/system/test-service.service",
+            "/usr/local/lib/systemd/system/default-test-service.service",
             "root",
             "root",
             0o644,
@@ -31,6 +31,13 @@ import pytest
             0o644,
             ["Description=", "Wants=", "PartOf="],
         ),
+        (
+            "/lib/systemd/system/getty@.service.d/test-drop-in.conf",
+            "root",
+            "root",
+            0o644,
+            ["ExecStart=", "ExecStart=-/sbin/agetty -a muru --noclear %I $TERM"],
+        ),
     ],
 )
 def test_unit_files(host, file_path, owner, group, mode, content_matches):
@@ -42,7 +49,12 @@ def test_unit_files(host, file_path, owner, group, mode, content_matches):
     for content in content_matches:
         assert content in unit_file.content_string, f"{content} not found in {file_path}"
 
-@pytest.mark.parametrize("service_name", ["test-service"])
-def test_service_installed(host, service_name):
+@pytest.mark.parametrize("service_name", ["default-test-service"])
+def test_default_service_not_enabled(host, service_name):
     service = host.service(service_name)
-    assert service.is_enabled, f"Service {service_name} should be installed"
+    assert not service.is_enabled, f"Service {service_name} should not be enabled"
+
+@pytest.mark.parametrize("service_name", ["test-service"])
+def test_service_enabled(host, service_name):
+    service = host.service(service_name)
+    assert service.is_enabled, f"Service {service_name} should be enabled"
