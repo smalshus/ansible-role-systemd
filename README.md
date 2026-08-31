@@ -90,7 +90,7 @@ Variables are available and organized according to the following software & mach
 
   This is **not** the same as `Service.User` (the runtime user inside a `[Service]` section).
 
-  Non-root ownership is applied only when `scope` is `user` **and** `path` is under that user's home directory. System load paths (for example `/etc/systemd/system`) always remain `root`-owned.
+  Non-root ownership is applied only when `scope` is `user` **and** `path` is under that user's home directory. System load paths (for example `/etc/systemd/system`) always remain `root`-owned. Per-user paths are created and rendered as that user (`become_user`) so a home-directory symlink cannot trick a root converge into chowning system paths.
 
 `[unit_config: <config-list-entry>:] group: <string>` (**default**: same as `user`)
 - group owner of the rendered unit/drop-in file when non-root ownership is allowed (see `user` above).
