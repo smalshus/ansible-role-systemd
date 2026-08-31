@@ -90,7 +90,7 @@ Variables are available and organized according to the following software & mach
 
   This is **not** the same as `Service.User` (the runtime user inside a `[Service]` section).
 
-  Non-root ownership is applied only when `scope` is `user` **and** `path` is outside system unit load directories (for example under `~/.config/systemd/user`). Files under `/etc/systemd/system`, `/usr/lib/systemd/system`, `/etc/systemd/user`, and similar paths always remain `root`-owned so an unprivileged account cannot rewrite units loaded by PID 1 or shared user-unit locations.
+  Non-root ownership is applied only when `scope` is `user` **and** `path` is under that user's home directory. System load paths (for example `/etc/systemd/system`) always remain `root`-owned.
 
 `[unit_config: <config-list-entry>:] group: <string>` (**default**: same as `user`)
 - group owner of the rendered unit/drop-in file when non-root ownership is allowed (see `user` above).

@@ -1,61 +1,4 @@
 ---
-- name: Reset per-user path prefix job list
-  ansible.builtin.set_fact:
-    _unit_path_prefix_jobs: []
-  tags:
-    - config
-
-- name: Collect per-user path prefix jobs
-  when:
-    - unit_item.path is defined
-    - _unit_file_owner != 'root'
-    - unit_item.path is match('^' ~ (_unit_home | regex_escape) ~ '/')
-  vars:
-    _unit_user: "{{ unit_item.user | default(_default_unit_user) }}"
-    _unit_group: "{{ unit_item.group | default(_unit_user) }}"
-    _unit_scope: "{{ unit_item.scope | default('user' if _unit_user != 'root' else 'system') }}"
-    _unit_path: "{{ unit_item.path }}"
-    _root_owned_path_pattern: "{{ '^(' ~ (_root_owned_unit_path_prefixes | map('regex_escape') | join('|')) ~ ')(/|$)' }}"
-    _unit_file_owner: "{{ _unit_user if (_unit_scope == 'user' and not (_unit_path is match(_root_owned_path_pattern))) else 'root' }}"
-    _unit_file_group: "{{ _unit_group if (_unit_scope == 'user' and not (_unit_path is match(_root_owned_path_pattern))) else 'root' }}"
-    _unit_home: "{{ ansible_facts.getent_passwd[_unit_user][4] }}"
-    _jobs: >-
-      {%- set ns = namespace(jobs=[]) -%}
-      {%- set rel = unit_item.path[(_unit_home | length) + 1:].split('/')
-          | reject('equalto', '') | list -%}
-      {%- for i in range(1, (rel | length) + 1) -%}
-      {%- set _ = ns.jobs.append({
-            'path': _unit_home ~ '/' ~ (rel[:i] | join('/')),
-            'owner': _unit_file_owner,
-            'group': _unit_file_group,
-            'label': unit_item.name ~ '.' ~ (unit_item.type | default(_default_unit_type))
-          }) -%}
-      {%- endfor -%}
-      {{ ns.jobs }}
-  ansible.builtin.set_fact:
-    _unit_path_prefix_jobs: "{{ _unit_path_prefix_jobs + _jobs }}"
-  loop: "{{ unit_config }}"
-  loop_control:
-    loop_var: unit_item
-    label: "{{ unit_item.name }}.{{ unit_item.type | default(_default_unit_type) }}"
-  tags:
-    - config
-
-- name: Create unit configuration path prefixes
-  become: true
-  ansible.builtin.file:
-    path: "{{ job.path }}"
-    state: directory
-    owner: "{{ job.owner }}"
-    group: "{{ job.group }}"
-    mode: "0755"
-  loop: "{{ _unit_path_prefix_jobs | default([]) }}"
-  loop_control:
-    loop_var: job
-    label: "{{ job.label }}:{{ job.path }}"
-  tags:
-    - config
-
 - name: Create unit configuration path
   become: true
   when: unit_item.path is defined
@@ -63,15 +6,14 @@
     _unit_user: "{{ unit_item.user | default(_default_unit_user) }}"
     _unit_group: "{{ unit_item.group | default(_unit_user) }}"
     _unit_scope: "{{ unit_item.scope | default('user' if _unit_user != 'root' else 'system') }}"
+    _unit_home: "{{ ansible_facts.getent_passwd[_unit_user][4] }}"
     _unit_path: "{{ unit_item.path }}"
-    _root_owned_path_pattern: "{{ '^(' ~ (_root_owned_unit_path_prefixes | map('regex_escape') | join('|')) ~ ')(/|$)' }}"
-    _unit_file_owner: "{{ _unit_user if (_unit_scope == 'user' and not (_unit_path is match(_root_owned_path_pattern))) else 'root' }}"
-    _unit_file_group: "{{ _unit_group if (_unit_scope == 'user' and not (_unit_path is match(_root_owned_path_pattern))) else 'root' }}"
+    _own_as_user: "{{ _unit_scope == 'user' and (_unit_path is match('^' ~ (_unit_home | regex_escape) ~ '(/|$)' )) }}"
   ansible.builtin.file:
     path: "{{ unit_item.path }}"
     state: directory
-    owner: "{{ _unit_file_owner }}"
-    group: "{{ _unit_file_group }}"
+    owner: "{{ _unit_user if _own_as_user else 'root' }}"
+    group: "{{ _unit_group if _own_as_user else 'root' }}"
     mode: "0755"
   loop: "{{ unit_config }}"
   loop_control:
@@ -88,15 +30,14 @@
     _unit_user: "{{ unit_item.user | default(_default_unit_user) }}"
     _unit_group: "{{ unit_item.group | default(_unit_user) }}"
     _unit_scope: "{{ unit_item.scope | default('user' if _unit_user != 'root' else 'system') }}"
+    _unit_home: "{{ ansible_facts.getent_passwd[_unit_user][4] }}"
     _unit_path: "{{ unit_item.path | default(_default_unit_path) }}"
-    _root_owned_path_pattern: "{{ '^(' ~ (_root_owned_unit_path_prefixes | map('regex_escape') | join('|')) ~ ')(/|$)' }}"
-    _unit_file_owner: "{{ _unit_user if (_unit_scope == 'user' and not (_unit_path is match(_root_owned_path_pattern))) else 'root' }}"
-    _unit_file_group: "{{ _unit_group if (_unit_scope == 'user' and not (_unit_path is match(_root_owned_path_pattern))) else 'root' }}"
+    _own_as_user: "{{ _unit_scope == 'user' and (_unit_path is match('^' ~ (_unit_home | regex_escape) ~ '(/|$)' )) }}"
   ansible.builtin.template:
     src: systemd.unit.j2
     dest: "{{ unit_dest }}"
-    owner: "{{ _unit_file_owner }}"
-    group: "{{ _unit_file_group }}"
+    owner: "{{ _unit_user if _own_as_user else 'root' }}"
+    group: "{{ _unit_group if _own_as_user else 'root' }}"
     mode: "0644"
     backup: "{{ systemd_backup_files | default(_default_systemd_backup_files) }}"
   loop: "{{ unit_config }}"
@@ -118,15 +59,14 @@
     _unit_user: "{{ unit_item.user | default(_default_unit_user) }}"
     _unit_group: "{{ unit_item.group | default(_unit_user) }}"
     _unit_scope: "{{ unit_item.scope | default('user' if _unit_user != 'root' else 'system') }}"
+    _unit_home: "{{ ansible_facts.getent_passwd[_unit_user][4] }}"
     _unit_path: "{{ unit_item.path | default(_default_unit_path) }}"
-    _root_owned_path_pattern: "{{ '^(' ~ (_root_owned_unit_path_prefixes | map('regex_escape') | join('|')) ~ ')(/|$)' }}"
-    _unit_file_owner: "{{ _unit_user if (_unit_scope == 'user' and not (_unit_path is match(_root_owned_path_pattern))) else 'root' }}"
-    _unit_file_group: "{{ _unit_group if (_unit_scope == 'user' and not (_unit_path is match(_root_owned_path_pattern))) else 'root' }}"
+    _own_as_user: "{{ _unit_scope == 'user' and (_unit_path is match('^' ~ (_unit_home | regex_escape) ~ '(/|$)' )) }}"
   ansible.builtin.template:
     src: override.conf.j2
     dest: "{{ unit_dest }}"
-    owner: "{{ _unit_file_owner }}"
-    group: "{{ _unit_file_group }}"
+    owner: "{{ _unit_user if _own_as_user else 'root' }}"
+    group: "{{ _unit_group if _own_as_user else 'root' }}"
     mode: "0644"
     backup: "{{ systemd_backup_files | default(_default_systemd_backup_files) }}"
   loop: "{{ unit_config }}"

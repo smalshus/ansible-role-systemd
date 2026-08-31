@@ -74,15 +74,3 @@ def test_user_unit_loaded_in_user_scope(host):
     )
     assert show.rc == 0, show.stderr
     assert show.stdout.strip() == "loaded", show.stdout
-
-
-def test_user_unit_path_owned_by_user(host):
-    for path in (
-        "/home/sduser/.config",
-        "/home/sduser/.config/systemd",
-        "/home/sduser/.config/systemd/user",
-    ):
-        directory = host.file(path)
-        assert directory.is_directory, f"{path} should be a directory"
-        assert directory.user == "sduser", f"{path} owner should be sduser"
-        assert directory.group == "sduser", f"{path} group should be sduser"
