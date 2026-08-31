@@ -85,6 +85,36 @@ Variables are available and organized according to the following software & mach
         WantedBy: multi-user.target
 ```
 
+`[unit_config: <config-list-entry>:] user: <string>` (**default**: `root`)
+- owner of the rendered unit/drop-in file. When `scope` is `user`, systemd operations (`daemon-reload`, enable/start/stop) also `become_user` this account.
+
+  This is **not** the same as `Service.User` (the runtime user inside a `[Service]` section). `user` controls file ownership and which systemd manager instance is targeted.
+
+`[unit_config: <config-list-entry>:] group: <string>` (**default**: same as `user`)
+- group owner of the rendered unit/drop-in file.
+
+`[unit_config: <config-list-entry>:] scope: <string>` (**default**: `user` if `user` is set and not `root`, otherwise `system`)
+- systemd manager scope passed to `ansible.builtin.systemd`: `system`, `user`, or `global`.
+
+  Changing `path` alone (for example to `~/.config/systemd/user`) is **not** enough for per-user units — set `user` (and optionally `scope`) so reload/launch talk to the user manager. This `scope` field is the manager scope; it is unrelated to the systemd unit `type: scope`.
+
+  For `scope: user`, the role sets `XDG_RUNTIME_DIR=/run/user/<uid>` (uid from `getent passwd`). The user manager must already be available (interactive session or lingering via `loginctl enable-linger <user>`). The role does not enable linger automatically.
+
+#### Example (per-user unit)
+
+ ```yaml
+  unit_config:
+    - name: my-user-job
+      path: /home/alice/.config/systemd/user
+      user: alice
+      group: alice
+      # scope defaults to user because user != root
+      Service:
+        ExecStart: /usr/bin/sleep infinity
+      Install:
+        WantedBy: default.target
+```
+
 `[unit_config: <config-list-entry>:] type: <string>` (**default**: `service`)
 - type of systemd unit to configure. There are currently 11 different unit types, ranging from daemons and the processes they consist of to path modification triggers. Consult [systemd(1)](http://man7.org/linux/man-pages/man1/systemd.1.html) for the full list of available units.
 

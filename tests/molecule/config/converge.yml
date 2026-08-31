@@ -1,6 +1,26 @@
 ---
 - name: Systemd unit configuration integration test playbook
   hosts: all
+  pre_tasks:
+    - name: Create per-user unit test account
+      ansible.builtin.user:
+        name: sduser
+        create_home: true
+        shell: /bin/bash
+
+    - name: Resolve passwd entries
+      ansible.builtin.getent:
+        database: passwd
+
+    - name: Enable linger for sduser
+      ansible.builtin.command:
+        cmd: loginctl enable-linger sduser
+        creates: /var/lib/systemd/linger/sduser
+
+    - name: Start user manager for sduser
+      ansible.builtin.systemd:
+        name: "user@{{ ansible_facts.getent_passwd['sduser'][1] }}.service"
+        state: started
   roles:
     - role: ansible-role-systemd
       vars:
@@ -61,3 +81,16 @@
               ExecStart:
                 - ""
                 - "-/sbin/agetty -a muru --noclear %I $TERM"
+          - name: "user-test-service"
+            path: "/home/sduser/.config/systemd/user"
+            user: sduser
+            group: sduser
+            scope: user
+            state: stopped
+            enabled: false
+            Unit:
+              Description: "This is a per-user test service unit"
+            Service:
+              ExecStart: '/usr/bin/sleep infinity'
+            Install:
+              WantedBy: 'default.target'

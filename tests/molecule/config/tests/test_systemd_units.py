@@ -38,6 +38,13 @@ import pytest
             0o644,
             ["ExecStart=", "ExecStart=-/sbin/agetty -a muru --noclear %I $TERM"],
         ),
+        (
+            "/home/sduser/.config/systemd/user/user-test-service.service",
+            "sduser",
+            "sduser",
+            0o644,
+            ["Description=", "ExecStart=", "WantedBy=default.target"],
+        ),
     ],
 )
 def test_unit_files(host, file_path, owner, group, mode, content_matches):
@@ -58,3 +65,12 @@ def test_default_service_not_enabled(host, service_name):
 def test_service_enabled(host, service_name):
     service = host.service(service_name)
     assert service.is_enabled, f"Service {service_name} should be enabled"
+
+
+def test_user_unit_loaded_in_user_scope(host):
+    show = host.run(
+        "runuser -u sduser -- env XDG_RUNTIME_DIR=/run/user/$(id -u sduser) "
+        "systemctl --user show user-test-service.service -p LoadState --value"
+    )
+    assert show.rc == 0, show.stderr
+    assert show.stdout.strip() == "loaded", show.stdout

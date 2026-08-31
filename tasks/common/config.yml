@@ -2,9 +2,14 @@
 - name: Create unit configuration path
   become: true
   when: unit_item.path is defined
+  vars:
+    _unit_user: "{{ unit_item.user | default(_default_unit_user) }}"
+    _unit_group: "{{ unit_item.group | default(_unit_user) }}"
   ansible.builtin.file:
     path: "{{ unit_item.path }}"
     state: directory
+    owner: "{{ _unit_user }}"
+    group: "{{ _unit_group }}"
     mode: "0755"
   loop: "{{ unit_config }}"
   loop_control:
@@ -18,11 +23,13 @@
   vars:
     config: "{{ unit_item }}"
     unit_dest: "{{ unit_item.path | default(_default_unit_path) }}/{{ unit_item.name }}.{{ unit_item.type | default(_default_unit_type) }}"
+    _unit_user: "{{ unit_item.user | default(_default_unit_user) }}"
+    _unit_group: "{{ unit_item.group | default(_unit_user) }}"
   ansible.builtin.template:
     src: systemd.unit.j2
     dest: "{{ unit_dest }}"
-    owner: root
-    group: root
+    owner: "{{ _unit_user }}"
+    group: "{{ _unit_group }}"
     mode: "0644"
     backup: "{{ systemd_backup_files | default(_default_systemd_backup_files) }}"
   loop: "{{ unit_config }}"
@@ -41,11 +48,13 @@
   vars:
     config: "{{ unit_item }}"
     unit_dest: "{{ unit_item.path | default(_default_unit_path) }}/{{ unit_item.name }}.{{ unit_item.type | default(_default_unit_type) }}"
+    _unit_user: "{{ unit_item.user | default(_default_unit_user) }}"
+    _unit_group: "{{ unit_item.group | default(_unit_user) }}"
   ansible.builtin.template:
     src: override.conf.j2
     dest: "{{ unit_dest }}"
-    owner: root
-    group: root
+    owner: "{{ _unit_user }}"
+    group: "{{ _unit_group }}"
     mode: "0644"
     backup: "{{ systemd_backup_files | default(_default_systemd_backup_files) }}"
   loop: "{{ unit_config }}"

@@ -1,4 +1,11 @@
 ---
+- name: Resolve passwd entries for unit file owners
+  when: unit_config | length > 0
+  ansible.builtin.getent:
+    database: passwd
+  tags:
+    - preflight
+
 - name: Check for uninstall signal
   when: perform_uninstall | bool
   tags:
