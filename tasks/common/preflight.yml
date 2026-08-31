@@ -4,7 +4,46 @@
   ansible.builtin.getent:
     database: passwd
   tags:
-    - preflight
+    - always
+
+- name: Ensure unit file owners exist in passwd
+  when: unit_config | length > 0
+  vars:
+    _unit_user: "{{ unit_item.user | default(_default_unit_user) }}"
+  ansible.builtin.assert:
+    that:
+      - _unit_user in ansible_facts.getent_passwd
+    fail_msg: >-
+      unit_config user '{{ _unit_user }}' for
+      '{{ unit_item.name }}.{{ unit_item.type | default(_default_unit_type) }}'
+      was not found in passwd. Create the account before managing its units.
+  loop: "{{ unit_config }}"
+  loop_control:
+    loop_var: unit_item
+    label: "{{ unit_item.name }}.{{ unit_item.type | default(_default_unit_type) }}"
+  tags:
+    - always
+
+- name: Reject scope=user on PID 1 unit load paths
+  when: unit_config | length > 0
+  vars:
+    _unit_user: "{{ unit_item.user | default(_default_unit_user) }}"
+    _unit_scope: "{{ unit_item.scope | default('user' if _unit_user != 'root' else 'system') }}"
+    _unit_path: "{{ unit_item.path | default(_default_unit_path) }}"
+    _pid1_path_pattern: "{{ '^(' ~ (_pid1_unit_path_prefixes | map('regex_escape') | join('|')) ~ ')(/|$)' }}"
+  ansible.builtin.assert:
+    that:
+      - _unit_scope != 'user' or not (_unit_path is match(_pid1_path_pattern))
+    fail_msg: >-
+      scope=user for '{{ unit_item.name }}.{{ unit_item.type | default(_default_unit_type) }}'
+      cannot use system unit path '{{ _unit_path }}'.
+      Set path to a per-user location such as /home/<user>/.config/systemd/user.
+  loop: "{{ unit_config }}"
+  loop_control:
+    loop_var: unit_item
+    label: "{{ unit_item.name }}.{{ unit_item.type | default(_default_unit_type) }}"
+  tags:
+    - always
 
 - name: Check for uninstall signal
   when: perform_uninstall | bool

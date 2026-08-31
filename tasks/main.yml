@@ -2,7 +2,7 @@
 - name: Include common preflight tasks
   ansible.builtin.include_tasks: "common/preflight.yml"
   tags:
-    - preflight
+    - always
 
 - name: Perform setup tasks
   when: not perform_uninstall | bool

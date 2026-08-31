@@ -21,6 +21,11 @@
       ansible.builtin.systemd:
         name: "user@{{ ansible_facts.getent_passwd['sduser'][1] }}.service"
         state: started
+
+    - name: Wait for sduser runtime directory
+      ansible.builtin.wait_for:
+        path: "/run/user/{{ ansible_facts.getent_passwd['sduser'][1] }}"
+        timeout: 30
   roles:
     - role: ansible-role-systemd
       vars:

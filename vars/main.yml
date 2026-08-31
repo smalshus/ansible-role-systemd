@@ -7,3 +7,22 @@ _default_unit_state: "stopped"
 _default_unit_user: "root"
 _default_unit_group: "root"
 _default_unit_scope: "system"
+# PID 1 / system-manager load paths — incompatible with scope=user.
+_pid1_unit_path_prefixes:
+  - /etc/systemd/system
+  - /run/systemd/system
+  - /usr/lib/systemd/system
+  - /usr/local/lib/systemd/system
+  - /lib/systemd/system
+# Paths that must remain root-owned even for user/global units.
+_root_owned_unit_path_prefixes:
+  - /etc/systemd/system
+  - /run/systemd/system
+  - /usr/lib/systemd/system
+  - /usr/local/lib/systemd/system
+  - /lib/systemd/system
+  - /etc/systemd/user
+  - /run/systemd/user
+  - /usr/lib/systemd/user
+  - /usr/local/lib/systemd/user
+  - /lib/systemd/user

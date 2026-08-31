@@ -58,6 +58,9 @@
     state: stopped
     enabled: false
     scope: "{{ _unit_scope }}"
+  when:
+    - unit_item.type | default(_default_unit_type) != 'conf'
+    - unit_item.name is not search("^[^@]+@$")
   loop: "{{ unit_config }}"
   loop_control:
     loop_var: unit_item

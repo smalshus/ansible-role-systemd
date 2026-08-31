@@ -86,19 +86,21 @@ Variables are available and organized according to the following software & mach
 ```
 
 `[unit_config: <config-list-entry>:] user: <string>` (**default**: `root`)
-- owner of the rendered unit/drop-in file. When `scope` is `user`, systemd operations (`daemon-reload`, enable/start/stop) also `become_user` this account.
+- account used for `become_user` when `scope` is `user`, and (when safe) the owner of the rendered unit/drop-in file.
 
-  This is **not** the same as `Service.User` (the runtime user inside a `[Service]` section). `user` controls file ownership and which systemd manager instance is targeted.
+  This is **not** the same as `Service.User` (the runtime user inside a `[Service]` section).
+
+  Non-root ownership is applied only when `scope` is `user` **and** `path` is outside system unit load directories (for example under `~/.config/systemd/user`). Files under `/etc/systemd/system`, `/usr/lib/systemd/system`, `/etc/systemd/user`, and similar paths always remain `root`-owned so an unprivileged account cannot rewrite units loaded by PID 1 or shared user-unit locations.
 
 `[unit_config: <config-list-entry>:] group: <string>` (**default**: same as `user`)
-- group owner of the rendered unit/drop-in file.
+- group owner of the rendered unit/drop-in file when non-root ownership is allowed (see `user` above).
 
 `[unit_config: <config-list-entry>:] scope: <string>` (**default**: `user` if `user` is set and not `root`, otherwise `system`)
 - systemd manager scope passed to `ansible.builtin.systemd`: `system`, `user`, or `global`.
 
   Changing `path` alone (for example to `~/.config/systemd/user`) is **not** enough for per-user units — set `user` (and optionally `scope`) so reload/launch talk to the user manager. This `scope` field is the manager scope; it is unrelated to the systemd unit `type: scope`.
 
-  For `scope: user`, the role sets `XDG_RUNTIME_DIR=/run/user/<uid>` (uid from `getent passwd`). The user manager must already be available (interactive session or lingering via `loginctl enable-linger <user>`). The role does not enable linger automatically.
+  `scope: user` requires a per-user `path` (not `/etc/systemd/system` or other PID 1 load paths). The role sets `XDG_RUNTIME_DIR=/run/user/<uid>` (uid from `getent passwd`). The user manager must already be available (interactive session or lingering via `loginctl enable-linger <user>`). The role does not enable linger automatically.
 
 #### Example (per-user unit)
 
