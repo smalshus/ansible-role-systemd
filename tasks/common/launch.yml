@@ -4,15 +4,22 @@
 
 - name: Activate configured Systemd units
   become: true
+  become_user: "{{ _unit_user if _unit_scope == 'user' else 'root' }}"
   when:
     - unit_item.type | default(_default_unit_type) != 'conf'
     - unit_item.name is not search("^[^@]+@$")
   vars:
     unit_item_manage_state: "{{ unit_item.manage_state | default(true) | bool }}"
+    _unit_user: "{{ unit_item.user | default(_default_unit_user) }}"
+    _unit_scope: "{{ unit_item.scope | default('user' if _unit_user != 'root' else 'system') }}"
+    _unit_uid: "{{ ansible_facts.getent_passwd[_unit_user][1] }}"
+    _unit_xdg_runtime_dir: "/run/user/{{ _unit_uid }}"
+  environment: "{{ {'XDG_RUNTIME_DIR': _unit_xdg_runtime_dir} if _unit_scope == 'user' else {} }}"
   ansible.builtin.systemd:
     name: "{{ unit_item.name }}.{{ unit_item.type | default(_default_unit_type) }}"
     state: "{{ unit_item.state | default(_default_unit_state) if unit_item_manage_state else omit }}"
     enabled: "{{ unit_item.enabled | default(_default_unit_enabled) }}"
+    scope: "{{ _unit_scope }}"
   loop: "{{ unit_config }}"
   loop_control:
     loop_var: unit_item

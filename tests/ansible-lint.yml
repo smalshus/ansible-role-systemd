@@ -3,6 +3,8 @@
 exclude_paths:
   - .git/
   - .github/
+  - .venv/
   - tests/molecule/
 warn_list:
   - experimental
+  - role-name

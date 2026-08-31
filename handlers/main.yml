@@ -1,11 +1,19 @@
 ---
 - name: Reload systemd units
   become: true
+  become_user: "{{ _unit_user if _unit_scope == 'user' else 'root' }}"
   listen: Reload systemd units
+  vars:
+    _unit_user: "{{ restart_item.unit_item.user | default(_default_unit_user) }}"
+    _unit_scope: "{{ restart_item.unit_item.scope | default('user' if _unit_user != 'root' else 'system') }}"
+    _unit_uid: "{{ ansible_facts.getent_passwd[_unit_user][1] }}"
+    _unit_xdg_runtime_dir: "/run/user/{{ _unit_uid }}"
+  environment: "{{ {'XDG_RUNTIME_DIR': _unit_xdg_runtime_dir} if _unit_scope == 'user' else {} }}"
   ansible.builtin.systemd:
     name: "{{ restart_item.dest | basename }}"
     state: "{{ restart_item.unit_item.state | default(omit) }}"
     daemon_reload: true
+    scope: "{{ _unit_scope }}"
   when:
     - restart_item.changed
     - restart_item.unit_item.reload_on_change is not defined or restart_item.unit_item.reload_on_change
@@ -17,17 +25,42 @@
 
 - name: Reload systemd daemon
   become: true
+  become_user: "{{ _unit_user if _unit_scope == 'user' else 'root' }}"
   listen: Reload systemd daemon
+  vars:
+    _unit_user: "{{ dropin_item.unit_item.user | default(_default_unit_user) }}"
+    _unit_scope: "{{ dropin_item.unit_item.scope | default('user' if _unit_user != 'root' else 'system') }}"
+    _unit_uid: "{{ ansible_facts.getent_passwd[_unit_user][1] }}"
+    _unit_xdg_runtime_dir: "/run/user/{{ _unit_uid }}"
+  environment: "{{ {'XDG_RUNTIME_DIR': _unit_xdg_runtime_dir} if _unit_scope == 'user' else {} }}"
   ansible.builtin.systemd:
     daemon_reload: true
+    scope: "{{ _unit_scope }}"
+  when:
+    - dropin_item.changed
+  loop: "{{ render_dropins.results | default([]) }}"
+  loop_control:
+    loop_var: dropin_item
+    label: "{{ dropin_item.unit_item.name }}.{{ dropin_item.unit_item.type | default(_default_unit_type) }}"
 
 - name: Uninstall systemd units
   become: true
+  become_user: "{{ _unit_user if _unit_scope == 'user' else 'root' }}"
   listen: Uninstall units
+  vars:
+    _unit_user: "{{ unit_item.user | default(_default_unit_user) }}"
+    _unit_scope: "{{ unit_item.scope | default('user' if _unit_user != 'root' else 'system') }}"
+    _unit_uid: "{{ ansible_facts.getent_passwd[_unit_user][1] }}"
+    _unit_xdg_runtime_dir: "/run/user/{{ _unit_uid }}"
+  environment: "{{ {'XDG_RUNTIME_DIR': _unit_xdg_runtime_dir} if _unit_scope == 'user' else {} }}"
   ansible.builtin.systemd:
     name: "{{ unit_item.name }}.{{ unit_item.type | default(_default_unit_type) }}"
     state: stopped
-    enabled: "no"
+    enabled: false
+    scope: "{{ _unit_scope }}"
+  when:
+    - unit_item.type | default(_default_unit_type) != 'conf'
+    - unit_item.name is not search("^[^@]+@$")
   loop: "{{ unit_config }}"
   loop_control:
     loop_var: unit_item
