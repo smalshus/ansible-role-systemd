@@ -7,4 +7,6 @@ exclude_paths:
   - tests/molecule/
 warn_list:
   - experimental
+  # Galaxy FQN is 0x0i.systemd; meta cannot declare that namespace
+  # (namespaces must start with a letter) without breaking Galaxy import.
   - role-name
